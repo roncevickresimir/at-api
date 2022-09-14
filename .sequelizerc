@@ -1,0 +1,10 @@
+var path = require('path');
+
+var baseRepoPath = 'src/repository';
+
+module.exports = {
+  'config':          path.resolve('config', 'database.js'),
+  'migrations-path': path.resolve(baseRepoPath, 'migrations'),
+  'models-path':     path.resolve(baseRepoPath, 'models'),
+  'seeders-path':    path.resolve(baseRepoPath, 'seeders')
+}
