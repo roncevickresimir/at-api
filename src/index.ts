@@ -15,6 +15,8 @@ const corsPort = `*`; //`https://${UI_HOST}`;
 
 const corsOptions = {
     origin: corsPort,
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    preflightContinue: false,
 };
 
 const server = createServer(app);
