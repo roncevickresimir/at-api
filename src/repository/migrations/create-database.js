@@ -292,6 +292,12 @@ module.exports = {
             unique: false,
             defaultValue: 0,
           },
+          image: {
+            field: 'image',
+            type: Sequelize.CITEXT,
+            allowNull: true,
+            unique: false,
+          },
           disabled: {
             field: 'disabled',
             type: Sequelize.BOOLEAN,
