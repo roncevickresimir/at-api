@@ -292,6 +292,13 @@ module.exports = {
             unique: false,
             defaultValue: 0,
           },
+          disabled: {
+            field: 'disabled',
+            type: Sequelize.BOOLEAN,
+            allowNull: false,
+            unique: false,
+            defaultValue: false,
+          },
         },
         { transaction }
       );
@@ -449,6 +456,13 @@ module.exports = {
             type: Sequelize.DataTypes.UUID,
             allowNull: false,
             unique: false,
+          },
+          disabled: {
+            field: 'disabled',
+            type: Sequelize.BOOLEAN,
+            allowNull: false,
+            unique: false,
+            defaultValue: false,
           },
         },
         { transaction }
