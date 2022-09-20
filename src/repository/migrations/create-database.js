@@ -407,12 +407,6 @@ module.exports = {
             primaryKey: true,
             allowNull: false,
           },
-          questId: {
-            field: 'questId',
-            type: Sequelize.DataTypes.UUID,
-            allowNull: false,
-            unique: false,
-          },
           title: {
             field: 'title',
             type: Sequelize.DataTypes.TEXT,
