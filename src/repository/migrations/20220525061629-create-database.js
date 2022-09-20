@@ -3,6 +3,7 @@
 module.exports = {
   async up(queryInterface, Sequelize) {
     const transaction = await queryInterface.sequelize.transaction();
+    //Support.sequelize.query('CREATE EXTENSION IF NOT EXISTS citext WITH SCHEMA public', {raw: true});
     try {
       await queryInterface.createTable(
         'Account',
