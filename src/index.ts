@@ -15,20 +15,29 @@ const corsPort = `*`; //`https://${UI_HOST}`;
 
 const corsOptions = {
     origin: corsPort,
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    preflightContinue: false,
 };
+
+app.all('*', function (req, res, next) {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header(
+        'Access-Control-Allow-Headers',
+        'Content-Type, Content-Length, Authorization, Accept, X-Requested-With , yourHeaderFeild'
+    );
+    res.header(
+        'Access-Control-Allow-Methods',
+        'PUT, POST, GET, DELETE, OPTIONS'
+    );
+
+    if (req.method == 'OPTIONS') {
+        res.send(200);
+    } else {
+        next();
+    }
+});
 
 const server = createServer(app);
 
-app.use(
-    cors({
-        allowedHeaders: ['authorization', 'Content-Type'],
-        origin: '*',
-        methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-        preflightContinue: false,
-    })
-);
+app.use(cors(corsOptions));
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
