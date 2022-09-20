@@ -21,7 +21,14 @@ const corsOptions = {
 
 const server = createServer(app);
 
-app.use(cors(corsOptions));
+app.use(
+    cors({
+        allowedHeaders: ['Content-Type'],
+        origin: '*',
+        methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+        preflightContinue: false,
+    })
+);
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
