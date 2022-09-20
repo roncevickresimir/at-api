@@ -21,12 +21,13 @@ app.all('*', function (req, res, next) {
     res.header('Access-Control-Allow-Origin', '*');
     res.header(
         'Access-Control-Allow-Headers',
-        'Content-Type, Content-Length, Authorization, Accept, X-Requested-With , yourHeaderFeild'
+        'Content-Type, Content-Length, Authorization, Accept, X-Requested-With'
     );
     res.header(
         'Access-Control-Allow-Methods',
         'PUT, POST, GET, DELETE, OPTIONS'
     );
+    res.header('cross-origin-resource-policy', 'cross-origin');
 
     if (req.method == 'OPTIONS') {
         res.send(200);
