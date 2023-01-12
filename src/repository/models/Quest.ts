@@ -41,6 +41,10 @@ class Quest extends Model<IQuest> implements IQuest {
     public image?: string;
 }
 
+export interface IQuestsData {
+    questCount: number;
+}
+
 export interface IQuestCreate extends Optional<IQuest, 'id' | 'disabled'> {}
 
 const modelOptions = getCommonModelOptions('Quest');

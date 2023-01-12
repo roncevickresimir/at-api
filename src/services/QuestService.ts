@@ -1,6 +1,10 @@
 import { Sequelize, Transaction } from 'sequelize';
 import PageRpp from '../api/models/PageRpp';
-import Quest, { IQuest, IQuestCreate } from '../repository/models/Quest';
+import Quest, {
+    IQuest,
+    IQuestCreate,
+    IQuestsData,
+} from '../repository/models/Quest';
 import Station, { IStation } from '../repository/models/Station';
 import QuestStationRelation, {
     IQuestStationRelationCreate,
@@ -150,6 +154,38 @@ export default class QuestService {
                 },
             });
         else return Quest.count();
+    };
+
+    FetchQuestsDataByUserIdAsync = async (
+        id?: string
+    ): Promise<IQuestsData | null> => {
+        const questCount = await Quest.count({
+            where: {
+                userId: id,
+            },
+        });
+
+        const result = {
+            questCount: questCount,
+        };
+
+        return result;
+    };
+
+    FetchQuestDataByUserIdAsync = async (
+        id?: string
+    ): Promise<IQuestsData | null> => {
+        const questCount = await Quest.count({
+            where: {
+                userId: id,
+            },
+        });
+
+        const result = {
+            questCount: questCount,
+        };
+
+        return result;
     };
 
     DeleteAsync = async (id?: string): Promise<boolean> => {

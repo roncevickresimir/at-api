@@ -37,14 +37,6 @@ export default class RewardController extends BaseController {
     ): Promise<any> => {
         const body: RewardCreate = req.body;
 
-        console.log(
-            '####################################################################'
-        );
-        console.log(body);
-        console.log(
-            '####################################################################'
-        );
-
         const rewardTypes: IRewardType[] | null =
             await this._rewardTypeService.FetchAllByStationIdAsync(
                 body.stationId

@@ -78,8 +78,8 @@ module.exports = {
             type: Sequelize.CITEXT,
             allowNull: false,
           },
-          pasword: {
-            field: 'pasword',
+          password: {
+            field: 'password',
             type: Sequelize.CITEXT,
             allowNull: false,
             unique: false,
