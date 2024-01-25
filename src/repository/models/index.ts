@@ -7,7 +7,7 @@ import { buildAssociations } from './associationBuilder';
 export const defineDatabaseModels = (database: Sequelize) => {
   const basename = path.basename(__filename);
   fs.readdirSync(__dirname)
-    .filter((file) => ![basename, 'associationBuilder.ts'].includes(file))
+    .filter((file) => ![basename, 'associationBuilder.ts', 'associationBuilder.js'].includes(file))
     .forEach((file) => {
       require(path.join(__dirname, file)).initModel(database);
     });

@@ -1,22 +1,18 @@
-FROM node:18-buster-slim AS build
+FROM node:18-buster-slim
 
 WORKDIR /usr/src/app
 
-COPY --chown=node:node package*.json ./
-
-RUN npm ci
-
-COPY --chown=node:node . .
-
-RUN npm run build
-
-RUN npm ci --only=production && npm cache clean --force
+COPY --chown=node:node dist/ /usr/src/app/dist/
+COPY --chown=node:node node_modules/ /usr/src/app/node_modules/
+# env
+COPY --chown=node:node config/ /usr/src/app/config/
+# resolve tsconfig.paths aliases
+COPY --chown=node:node tsconfig.json /usr/src/app/
+COPY --chown=node:node tsconfig-paths.js /usr/src/app/
 
 USER node
+EXPOSE 3000
 
-FROM node:18-buster-slim AS production
+ENV NODE_ENV=production
 
-COPY --chown=node:node --from=build /usr/src/app/node_modules ./node_modules
-COPY --chown=node:node --from=build /usr/src/app/dist ./dist
-
-CMD [ "node", "dist/index.js" ]
+CMD [ "node", "--require=./tsconfig-paths.js", "dist/index.js" ]

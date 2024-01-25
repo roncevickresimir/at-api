@@ -3,14 +3,14 @@ import { container } from 'tsyringe';
 
 import { QuestController, StationController } from '@api/controllers';
 import { CreateStation, PageRpp } from '@api/dtos';
-import { adminAuth, auth, upload, validateBody, validateQuery } from '@api/middleware';
+import { adminAuth, auth, validateBody, validateQuery } from '@api/middleware';
 
 const stationRouter = Router();
 
 const stationController = container.resolve(StationController);
 
-stationRouter.post('/', upload().array('images'), validateBody(CreateStation), auth, stationController.createStation);
-stationRouter.put('/:stationId', upload().array('images'), validateBody(CreateStation), stationController.editStation);
+stationRouter.post('/', validateBody(CreateStation), auth, stationController.createStation);
+stationRouter.put('/:stationId', validateBody(CreateStation), stationController.editStation);
 stationRouter.delete('/:stationId', auth, stationController.delete);
 
 stationRouter.get('/', adminAuth, validateQuery(PageRpp), stationController.getStations);
