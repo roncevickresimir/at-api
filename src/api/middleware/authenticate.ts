@@ -1,70 +1,72 @@
-import { Request, Response } from 'express';
+import { config } from 'api/config/config';
+import { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
-import express from 'express';
 
-import { JWT_KEY } from '../../config';
-import User from "../../repository/models/User";
-import { ErrorHandler } from '../util/handleError';
+import { ROLES } from '@api/dtos';
+import { UserService } from '@api/services';
+import { ErrorHandler } from '@api/util';
 
-export class LoggedUser {
-    id: string;
+interface AuthToken {
+  id: string;
+  valid: string;
 }
 
-const authenticate = () => {
-    return async (req: Request, res: Response, next: any) => {
-        let token = req.header('Authorization');
-        if (!token)
-            return next(
-                new ErrorHandler(401, 'Access denied, Authorization missing.')
-            );
+export const auth = (req: Request, res: Response, next: NextFunction) => {
+  const userService = new UserService();
+  let token = req.header('Authorization');
 
-        const bearerPrefix = 'Bearer ';
-        if (!token.startsWith(bearerPrefix))
-            return next(new ErrorHandler(400, 'Wrong token format.'));
+  if (!token) {
+    throw new Error('Access denied, Authorization missing.');
+  }
 
-        token = token.slice(bearerPrefix.length, token.length).trimLeft();
+  token = token.split(' ')[1];
 
-        jwt.verify(token, JWT_KEY!, (err, decoded) => {
-            if (err) return next(new ErrorHandler(401, 'Expired token.'));
+  jwt.verify(token, config.JWT_KEY, async (err, decoded) => {
+    if (err) {
+      return next(new ErrorHandler(401, err.message));
+    }
 
-            const loggedInUser = decoded as LoggedUser;
-            if (!loggedInUser)
-                return next(new ErrorHandler(401, 'Access denied.'));
+    const user = await userService.getById(decoded?.id);
 
-            res.locals.user = loggedInUser;
+    if (!user) {
+      return next(new ErrorHandler(401, 'Access denied.'));
+    }
 
-            next();
-        });
+    res.locals.user = {
+      id: user.id,
+      role: user.role,
     };
+
+    return next();
+  });
 };
 
-export const authenticateAsync = async (req: express.Request): Promise<string | null> => {
-    let token = req.header('Authorization');
-    if (!token)
-        throw (
-            new ErrorHandler(401, 'Access denied, Authorization missing.')
-        );
+export const adminAuth = (req: Request, res: Response, next: NextFunction) => {
+  let token = req.header('Authorization');
+  const userService = new UserService();
 
-    const bearerPrefix = 'Bearer ';
-    if (!token.startsWith(bearerPrefix))
-        throw (new ErrorHandler(400, 'Wrong token format.'));
+  if (!token) {
+    throw new Error('Access denied, Authorization missing.');
+  }
 
-    token = token.slice(bearerPrefix.length, token.length).trimLeft();
+  token = token.split(' ')[1];
 
-    const result: any = await jwt.verify(token, JWT_KEY!, (err, decoded: any) => {
-        if (err) throw (new ErrorHandler(401, 'Expired token.'));
+  jwt.verify(token, config.JWT_KEY, async (err, decoded) => {
+    if (err) {
+      return next(new ErrorHandler(401, err.message));
+    }
 
-        const loggedInUser = decoded as LoggedUser;
-        if (!loggedInUser)
-            throw (new ErrorHandler(401, 'Access denied.'));
+    const user = await userService.getById(decoded?.id);
 
-        return decoded.id;
-    });
+    if (!user || user.role !== ROLES.ADMIN) {
+      return next(new ErrorHandler(401, 'Access denied.'));
+    }
 
-    if (result)
-        return result;
+    res.locals.user = {
+      id: user.id,
+      role: user.role,
+    };
 
-    return null;
+    return next();
+  });
 };
-
-export default authenticate;

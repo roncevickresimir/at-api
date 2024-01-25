@@ -1,0 +1,10 @@
+{
+  "development": {
+    "username": "at_master",
+    "password": "at_master",
+    "database": "postgres",
+    "host": "at-db.cfywggcianzx.eu-west-1.rds.amazonaws.com",
+    "port": 5432,
+    "dialect": "postgres"
+  }
+}

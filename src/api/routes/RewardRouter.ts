@@ -1,8 +1,9 @@
 import Router from 'express-promise-router';
 import { container } from 'tsyringe';
-import RewardController from '../controllers/RewardController';
-import validateBody from '../middleware/validateBody';
-import { RewardCreate } from '../models/Reward';
+
+import { RewardController } from '@api/controllers';
+import { RewardCreate } from '@api/dtos';
+import { validateBody } from '@api/middleware';
 
 const rewardRouter = Router();
 
@@ -18,6 +19,6 @@ rewardRouter.get('/', rewardController.FetchRewardsAsync);
 
 rewardRouter.get('/:rewardId', rewardController.FetchRewardByIdAsync);
 
-rewardRouter.delete('/:rewardId', rewardController.DeleteAsync);
+rewardRouter.delete('/:rewardId', rewardController.delete);
 
-export default rewardRouter;
+export { rewardRouter };

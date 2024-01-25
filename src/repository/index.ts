@@ -1,28 +1,29 @@
+import { config } from 'api/config/config';
 import { Sequelize } from 'sequelize';
 
-import { DB_HOST, DB_NAME, DB_PASSWORD, DB_USER } from '../config';
+import { defineDatabaseModels } from './models';
 
 const database = new Sequelize({
-    dialect: 'postgres',
-    database: DB_NAME,
-    username: DB_USER,
-    password: DB_PASSWORD,
-    host: DB_HOST,
+  dialect: 'postgres',
+  database: config.DB_NAME,
+  username: config.DB_USER,
+  password: config.DB_PASSWORD,
+  host: config.DB_HOST,
+  port: config.DB_PORT,
 });
 
-const getCommonModelOptions = (tableName: string, timestamps = false) => {
-    return {
-        tableName: tableName,
-        // this is required - passing instance of sequelize
-        sequelize: database,
-        freezeTableName: true,
-        timestamps: timestamps,
-        quoteIdentifiers: false,
-    };
+const getCommonModelOptions = (tableName?: string, timestamps = false) => {
+  return {
+    tableName: tableName,
+    sequelize: database,
+    freezeTableName: true,
+    timestamps: timestamps,
+    quoteIdentifiers: false,
+  };
 };
 
-//database.sync();
+defineDatabaseModels(database);
 
-export { getCommonModelOptions };
+// database.sync({ alter: true });
 
-export default database;
+export { getCommonModelOptions, database };

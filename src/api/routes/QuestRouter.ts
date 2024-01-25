@@ -1,52 +1,36 @@
 import Router from 'express-promise-router';
 import { container } from 'tsyringe';
-import PageRpp from '../models/PageRpp';
-import validateBody from '../middleware/validateBody';
-import validateQuery from '../middleware/validateQuery';
-import { QuestCreate } from '../models/Quest';
-import QuestController from '../controllers/QuestController';
-import upload from '../middleware/multer';
+
+
+
+import { QuestController } from '@api/controllers';
+import { PageRpp, QuestCreate } from '@api/dtos';
+import { auth, upload, validateBody, validateQuery } from '@api/middleware';
 
 const questRouter = Router();
 
 const questController = container.resolve(QuestController);
 
-questRouter.post(
-    '/',
-    upload().array('image'),
-    validateBody(QuestCreate),
-    questController.PostQuestAsync
-);
+questRouter.post('/', validateBody(QuestCreate), auth, questController.createQuest);
 
-questRouter.get('/', validateQuery(PageRpp), questController.FetchQuestsAsync);
+questRouter.get('/', validateQuery(PageRpp), questController.getQuests);
 
-questRouter.get('/count', questController.CountQuestsByUserIdAsync);
+questRouter.get('/:questId/:userId', questController.getUserQuest);
 
-questRouter.get('/:questId', questController.FetchQuestAsync);
+questRouter.delete('/:questId', questController.deleteQuest);
 
-questRouter.get(
-    '/completed/:userId',
-    questController.FetchCompletedQuestsAsync
-);
+questRouter.get('/count', questController.countQuestsByUserId);
 
-questRouter.get('/:questId/:userId', questController.FetchQuestByUserAsync);
+questRouter.get('/:questId', questController.getQuest);
 
-questRouter.delete('/:questId', questController.DeleteAsync);
+questRouter.get('/completed/:userId', questController.getCompletedUserQuests);
 
-questRouter.put(
-    '/:questId',
-    validateBody(QuestCreate),
-    questController.PutQuestAsync
-);
+questRouter.put('/:questId', validateBody(QuestCreate), questController.editQuest);
 
-questRouter.get('/disable/:stationId', questController.PutQuestDisabledAsync);
+questRouter.get('/disable/:stationId', questController.disableQuest);
 
-questRouter.get('/enable/:stationId', questController.PutQuestEnabledAsync);
+questRouter.get('/enable/:stationId', questController.enableQuest);
 
-questRouter.post(
-    '/closest',
-    validateQuery(PageRpp),
-    questController.FetchQuestsNearbyAsync
-);
+questRouter.post('/closest', validateQuery(PageRpp), questController.getClosestQuests);
 
-export default questRouter;
+export { questRouter };

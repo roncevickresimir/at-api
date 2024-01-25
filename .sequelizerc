@@ -1,10 +1,8 @@
 var path = require('path');
 
-var baseRepoPath = 'src/repository';
-
 module.exports = {
-  'config':          path.resolve('config', 'database.js'),
-  'migrations-path': path.resolve(baseRepoPath, 'migrations'),
-  'models-path':     path.resolve(baseRepoPath, 'models'),
-  'seeders-path':    path.resolve(baseRepoPath, 'seeders')
-}
+  config: path.resolve('config/sequelize', 'config.json'),
+  'migrations-path': path.resolve('src/repository', 'migrations'),
+  'models-path': path.resolve('src/repository', 'models'),
+  'seeders-path': path.resolve('src/repository', 'seeders'),
+};

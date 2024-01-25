@@ -1,18 +1,15 @@
-import { injectable } from 'tsyringe';
-import BaseController from './BaseController';
+import { UtilService } from '@api/services';
 import express from 'express';
-import UtilService from "../../services/UtilService";
-
+import { injectable } from 'tsyringe';
+import { BaseController } from './BaseController';
 
 @injectable()
-export default class ImageController extends BaseController {
+export class UtilController extends BaseController {
+  private _utilServer = new UtilService();
 
-    private _utilServer = new UtilService();
+  GetServerVersion = async (req: express.Request, res: express.Response): Promise<express.Response> => {
+    const result = await this._utilServer.GetServerVersion();
 
-    GetServerVersion = async (req: express.Request, res: express.Response): Promise<express.Response> => {
-
-        const result = await this._utilServer.GetServerVersion();
-
-        return this.Ok(res, result);
-    };
-};
+    return this.Ok(res, result);
+  };
+}

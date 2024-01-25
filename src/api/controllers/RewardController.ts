@@ -1,176 +1,126 @@
-import { injectable } from 'tsyringe';
-import BaseController from './BaseController';
+import { PageRpp, ROLES, RewardCreate } from '@api/dtos';
+import { RewardService, UserService } from '@api/services';
 import express from 'express';
-import UserService from '../../services/UserService';
-import RewardService from '../../services/RewardService';
-import { RewardCreate } from '../models/Reward';
-import { RoleType } from '../models/User';
-import RoleService from '../../services/RoleService';
-import database from '../../repository';
-import FileCheck from '../util/fileCheck';
-import { LOCAL_DIR, UPLOAD_DIR_QR } from '../../config';
-import QRCode from 'qrcode';
-import ImageService from '../../services/ImageService';
-import {
-    IQRCode_Image,
-    IQRCode_ImageCreate,
-} from '../../repository/models/QRCode_Image';
-import PageRpp from '../models/PageRpp';
-import { Exception } from 'handlebars';
-import { IStation } from '../../repository/models/Station';
-import StationService from '../../services/StationService';
-import RewardTypeService from '../../services/RewardTypeService';
-import { IRewardType } from '../../repository/models/RewardType';
+import { injectable } from 'tsyringe';
+import { BaseController } from './BaseController';
 
 @injectable()
-export default class RewardController extends BaseController {
-    private _userService = new UserService();
-    private _rewardService = new RewardService();
-    private _rewardTypeService = new RewardTypeService();
-    private _roleService = new RoleService();
-    private _stationService = new StationService();
-    private _imageService = new ImageService();
+export class RewardController extends BaseController {
+  private _userService = new UserService();
+  private _rewardService = new RewardService();
 
-    PostAsync = async (
-        req: express.Request,
-        res: express.Response
-    ): Promise<any> => {
-        const body: RewardCreate = req.body;
+  PostAsync = async (req: express.Request, res: express.Response): Promise<express.Response> => {
+    const body: RewardCreate = req.body;
+    const user = await this._userService.getById(res.locals.user?.id);
 
-        const rewardTypes: IRewardType[] | null =
-            await this._rewardTypeService.FetchAllByStationIdAsync(
-                body.stationId
-            );
+    if (!user) return this.Unauthorized(res);
 
-        let result: any = null;
+    if (user.role === ROLES.USER) return this.Unauthorized(res);
 
-        rewardTypes?.forEach(async (rewardType: IRewardType) => {
-            const transaction = await database.transaction();
-            try {
-                Object.assign(body, { rewardTypeId: rewardType.id });
+    const images: any[] = [];
+    (<Array<Express.Multer.File>>req.files).forEach((file: Express.Multer.File) => {
+      images.push(file.filename);
+    });
 
-                result = await this._rewardService.PostRewardAsync(
-                    body,
-                    transaction
-                );
+    const reward: any = {
+      // name: body.name,
+      // description: body.description,
+      userId: user?.id,
+      stationId: body.stationId,
+    };
+    Object.assign(reward, {
+      image: images[0],
+    });
 
-                if (!result)
-                    throw new Exception(
-                        'INTERNAL_ERROR.STATION.CREATION_FAILED'
-                    );
+    const result = await this._rewardService.PostRewardAsync(reward);
 
-                transaction.commit();
-            } catch (e: any) {
-                transaction.rollback();
+    if (result) return this.Ok(res, result);
 
-                console.log(e);
+    return this.BadRequest(res);
+  };
 
-                return this.ErrorMessage(res, JSON.stringify(e));
-            }
-        });
+  FetchRewardByIdAsync = async (req: express.Request, res: express.Response): Promise<express.Response> => {
+    const params = req.params;
+
+    if (params.rewardId) {
+      const result = await this._rewardService.getById(params.rewardId);
+
+      return this.Ok(res, result);
+    }
+
+    return this.BadRequest(res);
+  };
+
+  CountRewardsByUserIdAsync = async (req: express.Request, res: express.Response): Promise<express.Response> => {
+    const user = await this._userService.getById(res.locals.user?.id);
+
+    if (user) {
+      if (user.role !== ROLES.ADMIN) {
+        const result = await this._rewardService.countQuestsByUserId(user.id + '');
 
         return this.Ok(res, result);
+      } else {
+        const result = await this._rewardService.countQuestsByUserId();
+
+        return this.Ok(res, result);
+      }
+    }
+
+    return this.BadRequest(res);
+  };
+
+  FetchRewardsAsync = async (req: express.Request, res: express.Response): Promise<express.Response> => {
+    const filter: PageRpp = {
+      rpp: parseInt(req.query.rpp + ''),
+      page: parseInt(req.query.page + ''),
     };
 
-    FetchRewardsByUserIdAsync = async (
-        req: express.Request,
-        res: express.Response
-    ): Promise<express.Response> => {
-        const params = req.params;
+    const user = await this._userService.getById(res.locals.user?.id);
 
-        if (params.userId) {
-            const result = await this._rewardService.FetchAllByUserIdAsync(
-                params.userId
-            );
+    if (user) {
+      const result = await this._rewardService.FetchAllByUserIdAsync(user.id + '', filter);
 
-            return this.Ok(res, result);
-        }
+      return this.Ok(res, result);
+    }
 
-        return this.BadRequest(res);
-    };
+    return this.BadRequest(res);
+  };
 
-    CountRewardsByUserIdAsync = async (
-        req: express.Request,
-        res: express.Response
-    ): Promise<express.Response> => {
-        const user = await this._userService.GetByIdAsync(res.locals.user?.id);
+  PutAsync = async (req: express.Request, res: express.Response): Promise<express.Response> => {
+    const body: RewardCreate = req.body;
+    const user = await this._userService.getById(res.locals.user?.id);
 
-        if (user) {
-            const role = await this._roleService.GetByIdAsync(user.roleId);
+    if (!user) return this.Unauthorized(res);
 
-            if (role?.abrv !== RoleType.Admin) {
-                const result = await this._rewardService.CountAllByUserIdAsync(
-                    user.id + ''
-                );
+    if (user.role === ROLES.USER) return this.Unauthorized(res);
 
-                return this.Ok(res, result);
-            } else {
-                const result =
-                    await this._rewardService.CountAllByUserIdAsync();
+    // const reward: any = {
+    //   userId: user?.id,
+    //   ...body,
+    // };
 
-                return this.Ok(res, result);
-            }
-        }
+    // const result = await this._rewardService.PutRewardAsync(req.params.rewardId, reward);
 
-        return this.BadRequest(res);
-    };
+    // if (result) return this.Ok(res, result);
 
-    FetchRewardByIdAsync = async (
-        req: express.Request,
-        res: express.Response
-    ): Promise<express.Response> => {
-        const params = req.params;
+    return this.BadRequest(res);
+  };
 
-        if (params.rewardId) {
-            const result = await this._rewardService.GetByIdAsync(
-                params.rewardId
-            );
+  delete = async (req: express.Request, res: express.Response): Promise<express.Response> => {
+    const user = await this._userService.getById(res.locals.user?.id);
 
-            return this.Ok(res, result);
-        }
+    if (!user || !req.params.rewardId) return this.Unauthorized(res);
 
-        return this.BadRequest(res);
-    };
+    if (user.role === ROLES.USER) return this.Unauthorized(res);
 
-    FetchRewardsAsync = async (
-        req: express.Request,
-        res: express.Response
-    ): Promise<express.Response> => {
-        const filter: PageRpp = {
-            rpp: parseInt(req.query.rpp + ''),
-            page: parseInt(req.query.page + ''),
-        };
+    const result = await this._rewardService.DeleteRewardAsync(req.params.rewardId);
 
-        const user = await this._userService.GetByIdAsync(res.locals.user?.id);
+    if (result) return this.Ok(res);
 
-        if (user) {
-            const result = await this._rewardService.FetchAllByUserIdAsync(
-                user.id + ''
-            );
+    return this.BadRequest(res);
+  };
 
-            return this.Ok(res, result);
-        }
-
-        return this.BadRequest(res);
-    };
-
-    DeleteAsync = async (
-        req: express.Request,
-        res: express.Response
-    ): Promise<express.Response> => {
-        const user = await this._userService.GetByIdAsync(res.locals.user?.id);
-
-        if (!user || !req.params.rewardId) return this.Unauthorized(res);
-
-        const role = await this._roleService.GetByIdAsync(user?.roleId);
-
-        if (role?.abrv === RoleType.User) return this.Unauthorized(res);
-
-        const result = await this._rewardService.DeleteRewardAsync(
-            req.params.rewardId
-        );
-
-        if (result) return this.Ok(res, result);
-        return this.BadRequest(res);
-    };
+  public FetchRewardsByUserIdAsync(arg0: string, FetchRewardsByUserIdAsync: any) {
+    throw new Error('Method not implemented.');
+  }
 }

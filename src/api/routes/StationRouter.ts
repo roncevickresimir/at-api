@@ -1,61 +1,30 @@
 import Router from 'express-promise-router';
 import { container } from 'tsyringe';
-import PageRpp from '../models/PageRpp';
-import StationController from '../controllers/StationController';
-import upload from '../middleware/multer';
-import validateBody from '../middleware/validateBody';
-import validateQuery from '../middleware/validateQuery';
-import { StationCreate } from '../models/Station';
-import { EndUserStationCreate } from '../models/EndUserStation';
-import EndUserStationController from '../controllers/EndUserStationController';
-import RewardController from '../controllers/RewardController';
+
+import { QuestController, StationController } from '@api/controllers';
+import { CreateStation, PageRpp } from '@api/dtos';
+import { adminAuth, auth, upload, validateBody, validateQuery } from '@api/middleware';
 
 const stationRouter = Router();
 
 const stationController = container.resolve(StationController);
-const endUserStationController = container.resolve(EndUserStationController);
-const rewardController = container.resolve(RewardController);
 
-stationRouter.post(
-    '/',
-    upload().array('images'),
-    validateBody(StationCreate),
-    stationController.PostStationAsync
-);
+stationRouter.post('/', upload().array('images'), validateBody(CreateStation), auth, stationController.createStation);
+stationRouter.put('/:stationId', upload().array('images'), validateBody(CreateStation), stationController.editStation);
+stationRouter.delete('/:stationId', auth, stationController.delete);
 
-stationRouter.get('/count', stationController.CountStationsByUserIdAsync);
+stationRouter.get('/', adminAuth, validateQuery(PageRpp), stationController.getStations);
+stationRouter.get('/:stationId', auth, stationController.getStation);
 
-stationRouter.get(
-    '/',
-    validateQuery(PageRpp),
-    stationController.FetchStationsAsync
-);
+stationRouter.get('/owned/:userId', auth, stationController.getStationsByOwnerId);
+stationRouter.get('/count/owned/:userId', stationController.countStationsByOwnerId);
 
-stationRouter.get('/:stationId', stationController.FetchStationAsync);
+stationRouter.post('/complete/:stationId', auth, stationController.completeStation);
+stationRouter.get('/user/:userId', auth, stationController.getUserStations);
+stationRouter.get('/count/user/:userId', auth, stationController.countUserStations);
+stationRouter.get('/:stationId/users', auth, stationController.countStationUsers);
 
-stationRouter.delete('/:stationId', stationController.DeleteAsync);
+stationRouter.post('/disable/:stationId', stationController.disableStation);
+stationRouter.post('/enable/:stationId', stationController.enableStation);
 
-stationRouter.put(
-    '/:stationId',
-    upload().array('images'),
-    validateBody(StationCreate),
-    stationController.PutStationAsync
-);
-
-stationRouter.get(
-    '/disable/:stationId',
-    stationController.PutStationDisabledAsync
-);
-
-stationRouter.get(
-    '/enable/:stationId',
-    stationController.PutStationEnabledAsync
-);
-
-stationRouter.post(
-    '/complete/',
-    endUserStationController.PostEndUserStationAsync,
-    rewardController.PostAsync
-);
-
-export default stationRouter;
+export { stationRouter };

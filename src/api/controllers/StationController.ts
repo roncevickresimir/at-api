@@ -1,355 +1,184 @@
-import { injectable } from 'tsyringe';
-import BaseController from './BaseController';
 import express from 'express';
-import UserService from '../../services/UserService';
-import database from '../../repository';
-import StationService from '../../services/StationService';
-import { StationCreate } from '../models/Station';
-import RoleService from '../../services/RoleService';
-import { RoleType } from '../models/User';
-import FileCheck from '../util/fileCheck';
-import { ImageCreate } from '../models/Image';
-import path from 'path';
-import { LOCAL_DIR, UPLOAD_DIR, UPLOAD_DIR_QR } from '../../config';
-import ImageService from '../../services/ImageService';
 import { Exception } from 'handlebars';
-import QRCode from 'qrcode';
-import PageRpp from '../models/PageRpp';
-import { resourceLimits } from 'worker_threads';
-import Station, { IStation } from '../../repository/models/Station';
-
-@injectable()
-export default class StationController extends BaseController {
-    private _userService = new UserService();
-    private _stationService = new StationService();
-    private _roleService = new RoleService();
-    private _imageService = new ImageService();
-
-    PostStationAsync = async (
-        req: express.Request,
-        res: express.Response
-    ): Promise<express.Response> => {
-        const body: StationCreate = req.body;
-
-        const user = await this._userService.GetByIdAsync(res.locals.user?.id);
-
-        const role = await this._roleService.GetByIdAsync(user?.roleId);
-
-        if (role?.abrv === RoleType.Admin) {
-            const transaction = await database.transaction();
-
-            try {
-                Object.assign(body, { userId: user?.id });
-
-                const result = await this._stationService.CreateStationAsync(
-                    body,
-                    transaction
-                );
-
-                if (!result)
-                    throw new Exception(
-                        'INTERNAL_ERROR.STATION.CREATION_FAILED'
-                    );
-
-                if (req.files && result) {
-                    const images: ImageCreate[] = [];
-                    (<Array<Express.Multer.File>>req.files).map(
-                        (file: Express.Multer.File) => {
-                            /*if (FileCheck.checkExists(file.path))
-                            FileCheck.deleteFile(file.path);*/
-
-                            images.push({
-                                stationId: result.id + '',
-                                fileName: file.originalname,
-                                fileExt: path.extname(file.originalname),
-                                filePath: UPLOAD_DIR + file.filename,
-                                createdAt: new Date(),
-                            });
-                        }
-                    );
-
-                    const resultImages =
-                        await this._imageService.InsertImagesAsync(
-                            images,
-                            transaction
-                        );
-
-                    if (!resultImages)
-                        throw new Exception(
-                            'INTERNAL_ERROR.STATION.IMAGES_UPLOAD_FAILED'
-                        );
-                }
-
-                // Generate QR code from stationId
-
-                const fileName = Date.now() + '.svg';
-                const destination = LOCAL_DIR + 'qr-codes/';
-
-                const qrcodeImage: any = {
-                    fileName: fileName,
-                    fileExt: 'SVG',
-                    filePath: UPLOAD_DIR_QR + fileName,
-                    createdAt: new Date(),
-                    stationId: result.id,
-                };
-                const image = await this._imageService.PostQRCodeAsync(
-                    qrcodeImage,
-                    transaction
-                );
-
-                if (FileCheck.checkExists(destination + fileName))
-                    FileCheck.deleteFile(destination + fileName);
-
-                QRCode.toFile(
-                    destination + fileName,
-                    result.id ? result.id : '',
-                    {
-                        type: 'svg',
-                    }
-                );
-
-                transaction.commit();
-
-                return this.Ok(res, result);
-            } catch (e: any) {
-                transaction.rollback();
-
-                console.log(e);
 
-                return this.ErrorMessage(res, JSON.stringify(e));
-            }
-        }
+import { CreateStation, ROLES } from '@api/dtos';
+import { Station } from '@api/models';
+import { QuestService, StationService, UserService } from '@api/services';
 
-        return this.Unauthorized(res);
-    };
+import { BaseController } from './BaseController';
 
-    CountStationsByUserIdAsync = async (
-        req: express.Request,
-        res: express.Response
-    ): Promise<express.Response> => {
-        const user = await this._userService.GetByIdAsync(res.locals.user?.id);
+export class StationController extends BaseController {
+  private userService = new UserService();
+  private stationService = new StationService();
+  private questService = new QuestService();
 
-        if (user) {
-            const role = await this._roleService.GetByIdAsync(user.roleId);
+  createStation = async (req: express.Request, res: express.Response): Promise<express.Response> => {
+    const body: CreateStation = req.body;
 
-            if (role?.abrv !== RoleType.Admin) {
-                const result = await this._stationService.CountAllByUserIdAsync(
-                    user.id + ''
-                );
+    const result = await this.stationService.createStation({
+      ...body,
+      userId: res.locals.user?.id,
+    });
 
-                return this.Ok(res, result);
-            } else {
-                const result =
-                    await this._stationService.CountAllByUserIdAsync();
+    if (!result) {
+      throw new Exception('INTERNAL_ERROR.STATION.CREATION_FAILED');
+    }
 
-                return this.Ok(res, result);
-            }
-        }
+    return this.Ok(res, result);
+  };
 
-        return this.BadRequest(res);
-    };
-
-    FetchStationAsync = async (
-        req: express.Request,
-        res: express.Response
-    ): Promise<express.Response> => {
-        const params: any = req.params;
-
-        if (params.stationId) {
-            const station: IStation | null =
-                await this._stationService.GetByIdAsync(params.stationId);
-
-            return this.Ok(res, station);
-        }
-
-        return this.BadRequest(res);
-    };
-
-    FetchStationsAsync = async (
-        req: express.Request,
-        res: express.Response
-    ): Promise<express.Response> => {
-        const query: any = req.query;
-
-        if (query) {
-            const result = await this._stationService.FetchStationsAsync(query);
+  editStation = async (req: express.Request, res: express.Response): Promise<express.Response> => {
+    const { stationId } = req.params;
+    const body: CreateStation = req.body;
 
-            return this.Ok(res, result);
-        }
+    const user = res.locals.user;
 
-        return this.BadRequest(res);
-    };
-
-    DeleteAsync = async (
-        req: express.Request,
-        res: express.Response
-    ): Promise<express.Response> => {
-        const params: any = req.params;
-
-        const user = await this._userService.GetByIdAsync(res.locals.user?.id);
-
-        const role = await this._roleService.GetByIdAsync(user?.roleId);
+    const station = await this.stationService.getById(stationId);
 
-        if (role?.abrv === RoleType.Admin) {
-            if (params.stationId) {
-                const result = await this._stationService.DeleteStationAsync(
-                    params.stationId
-                );
-
-                if (result) return this.Ok(res, result);
-
-                return this.BadRequest(res, result);
-            }
-        }
-
-        return this.BadRequest(res);
-    };
-
-    PutStationAsync = async (
-        req: express.Request,
-        res: express.Response
-    ): Promise<express.Response> => {
-        const params: any = req.params;
-
-        const body: StationCreate = req.body;
-
-        const user = await this._userService.GetByIdAsync(res.locals.user?.id);
-
-        const role = await this._roleService.GetByIdAsync(user?.roleId);
-
-        if (role?.abrv === RoleType.Admin && params.stationId) {
-            const transaction = await database.transaction();
-
-            try {
-                const result = await this._stationService.PutStationAsync(
-                    body,
-                    params.stationId,
-                    transaction
-                );
-
-                if (!result)
-                    throw new Exception(
-                        'INTERNAL_ERROR.STATION.CREATION_FAILED'
-                    );
-
-                if (req.files && result) {
-                    const images: ImageCreate[] = [];
-                    (<Array<Express.Multer.File>>req.files).map(
-                        (file: Express.Multer.File) => {
-                            /*if (FileCheck.checkExists(file.path))
-                            FileCheck.deleteFile(file.path);*/
-
-                            images.push({
-                                stationId: params.stationId + '',
-                                fileName: file.originalname,
-                                fileExt: path.extname(file.originalname),
-                                filePath: UPLOAD_DIR + file.filename,
-                                createdAt: new Date(),
-                            });
-                        }
-                    );
-
-                    const resultImages =
-                        await this._imageService.InsertImagesAsync(
-                            images,
-                            transaction
-                        );
-
-                    if (!resultImages)
-                        throw new Exception(
-                            'INTERNAL_ERROR.STATION.IMAGES_UPLOAD_FAILED'
-                        );
-                }
-
-                transaction.commit();
-
-                return this.Ok(res, result);
-            } catch (e: any) {
-                transaction.rollback();
-
-                console.log(e);
-
-                return this.ErrorMessage(res, JSON.stringify(e));
-            }
-        }
-
-        return this.Unauthorized(res);
-    };
-
-    PutStationDisabledAsync = async (
-        req: express.Request,
-        res: express.Response
-    ): Promise<express.Response> => {
-        try {
-            const params: any = req.params;
-
-            const user = await this._userService.GetByIdAsync(
-                res.locals.user?.id
-            );
-
-            if (!user) this.Unauthorized(res);
-
-            const role = await this._roleService.GetByIdAsync(
-                user?.roleId + ''
-            );
-
-            if (role?.abrv === RoleType.Admin && params.stationId) {
-                const result =
-                    await this._stationService.PutStationDisabledAsync(
-                        params.stationId
-                    );
-
-                return this.Ok(res, result);
-            } else if (
-                (role?.abrv === RoleType.Object ||
-                    role?.abrv === RoleType.Office) &&
-                params.stationId
-            ) {
-                const result =
-                    await this._stationService.PutStationDisabledAsync(
-                        params.stationId,
-                        user?.id + ''
-                    );
-
-                return this.Ok(res, result);
-            }
-        } catch (e: any) {
-            console.log(e);
-        }
-
-        return this.BadRequest(res);
-    };
-
-    PutStationEnabledAsync = async (
-        req: express.Request,
-        res: express.Response
-    ): Promise<express.Response> => {
-        const params: any = req.params;
-
-        const user = await this._userService.GetByIdAsync(res.locals.user?.id);
-        if (!user) this.Unauthorized(res);
-
-        const role = await this._roleService.GetByIdAsync(user?.roleId);
-
-        if (role?.abrv === RoleType.Admin && params.stationId) {
-            const result = await this._stationService.PutStationEnabledAsync(
-                params.stationId
-            );
-
-            return this.Ok(res, result);
-        } else if (
-            (role?.abrv === RoleType.Object ||
-                role?.abrv === RoleType.Office) &&
-            params.stationId
-        ) {
-            const result = await this._stationService.PutStationEnabledAsync(
-                params.stationId,
-                user?.id + ''
-            );
-
-            return this.Ok(res, result);
-        }
-
-        return this.BadRequest(res);
-    };
+    if (user.id !== station?.userId && user.role !== ROLES.ADMIN) {
+      return this.Unauthorized(res);
+    }
+
+    const result = await this.stationService.editStation(body, stationId);
+
+    if (!result) {
+      throw new Exception('INTERNAL_ERROR.STATION.CREATION_FAILED');
+    }
+
+    return this.Ok(res, result);
+  };
+
+  getStation = async (req: express.Request, res: express.Response): Promise<express.Response> => {
+    const params: any = req.params;
+
+    if (params.stationId) {
+      const station: Station | null = await this.stationService.getById(params.stationId);
+
+      return this.Ok(res, station);
+    }
+
+    return this.BadRequest(res);
+  };
+
+  getStations = async (req: express.Request, res: express.Response): Promise<express.Response> => {
+    const { filter }: any = req.query;
+
+    const result = await this.stationService.getStations(filter);
+    if (result) {
+      return this.Ok(res, result);
+    }
+
+    return this.BadRequest(res);
+  };
+
+  getStationsByOwnerId = async (req: express.Request, res: express.Response): Promise<express.Response> => {
+    const { userId } = req.params;
+
+    const result = await this.stationService.getStationsByOwnerId(userId);
+
+    return this.Ok(res, result);
+  };
+
+  countStationsByOwnerId = async (req: express.Request, res: express.Response): Promise<express.Response> => {
+    const { userId } = req.params;
+
+    const result = await this.stationService.countStationsByOwnerId(userId);
+
+    return this.Ok(res, result);
+  };
+
+  getUserStations = async (req: express.Request, res: express.Response): Promise<express.Response> => {
+    const { userId } = req.params;
+
+    const result = await this.stationService.getUserStations(userId);
+
+    return this.Ok(res, result);
+  };
+
+  countUserStations = async (req: express.Request, res: express.Response): Promise<express.Response> => {
+    const { userId } = req.params;
+    const result = await this.stationService.countUserStations(userId);
+
+    return this.Ok(res, result);
+  };
+
+  countStationUsers = async (req: express.Request, res: express.Response): Promise<express.Response> => {
+    const { stationId } = req.params;
+
+    const result = await this.stationService.countStationUsers(stationId);
+
+    return this.Ok(res, result);
+  };
+
+  delete = async (req: express.Request, res: express.Response): Promise<express.Response> => {
+    const { stationId } = req.params;
+    const user = await this.userService.getById(res.locals.user?.id);
+    const station = await this.stationService.getById(stationId);
+
+    if (user?.id !== station?.userId && user?.role !== ROLES.ADMIN) {
+      return this.Unauthorized(res);
+    }
+
+    const result = await this.stationService.deleteStation(stationId);
+
+    if (result) return this.Ok(res, result);
+
+    return this.BadRequest(res);
+  };
+
+  disableStation = async (req: express.Request, res: express.Response): Promise<express.Response> => {
+    const { stationId } = req.params;
+    const user = res.locals.user;
+    const station = await this.stationService.getById(stationId);
+
+    if (user.id !== station?.userId && user.role !== ROLES.ADMIN) {
+      this.Unauthorized(res);
+    }
+
+    const result = await this.stationService.disableStation(stationId);
+
+    return this.Ok(res, result);
+  };
+
+  enableStation = async (req: express.Request, res: express.Response): Promise<express.Response> => {
+    const { stationId } = req.params;
+    const user = res.locals.user;
+    const station = await this.stationService.getById(stationId);
+
+    if (user.id !== station?.userId && user.role !== ROLES.ADMIN) {
+      this.Unauthorized(res);
+    }
+
+    const result = await this.stationService.enableStation(stationId);
+
+    return this.Ok(res, result);
+  };
+
+  public completeStation = async (req: express.Request, res: express.Response): Promise<express.Response> => {
+    const stationId = req.params.stationId;
+    const userId = res.locals.user?.id;
+
+    const station = await this.stationService.getById(stationId);
+
+    if (!station) {
+      return this.BadRequest(res);
+    }
+
+    const [userQuest] = await this.questService.createUserQuest(station.questId, userId);
+
+    const result = await this.stationService.completeStation(stationId, userId);
+
+    const complete = userQuest.Quest.Stations.filter((s) => s.UserStations[0].complete).length;
+    const total = userQuest.Quest.Stations.length;
+    const progress = Math.round((complete * 100) / total);
+
+    await this.questService.editUserQuest({
+      questId: userQuest.questId,
+      userId: userQuest.userId,
+      progress: progress,
+      complete: complete === total,
+    });
+
+    return this.Ok(res, result);
+  };
 }
