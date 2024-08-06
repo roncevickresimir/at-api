@@ -1,11 +1,9 @@
-import { Type } from "class-transformer";
 import {
   Equals,
   IsEmail,
   IsNotEmpty,
   IsOptional,
   IsString,
-  Matches,
   MaxLength,
   MinLength,
 } from "class-validator";
@@ -51,18 +49,8 @@ export class UserCreate {
   @IsString()
   @MinLength(8)
   @MaxLength(128)
-  @Matches(
-    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_/+\-=[\]{};':"\\|,.<>?])[A-Za-z\d!@#$%^&*()_/+\-=[\]{};':"\\|,.<>?]{8,128}$/
-  )
   @IsNotEmpty()
   password: string;
-
-  @IsString()
-  @MinLength(8)
-  @MaxLength(128)
-  @IsNotEmpty()
-  @Equals(o => o.password)
-  confirmPassword: string;
 
   @IsString()
   @IsNotEmpty()
@@ -80,9 +68,6 @@ export class EndUserCreate {
   @IsString()
   @MinLength(8)
   @MaxLength(128)
-  @Matches(
-    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_/+\-=[\]{};':"\\|,.<>?])[A-Za-z\d!@#$%^&*()_/+\-=[\]{};':"\\|,.<>?]{8,128}$/
-  )
   @IsNotEmpty()
   password: string;
 }
