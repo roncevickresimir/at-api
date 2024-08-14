@@ -257,8 +257,13 @@ export class QuestService {
       attributes: [
         [
           Sequelize.literal(`
-            (("Quest"."location"#>>'{latitude}')::numeric + ${location.latitude}) +
-            (("Quest"."location"#>>'{longitude}')::numeric + ${location.longitude})
+          ROUND( 
+            (SQRT(
+              POW(69.1 * (("Quest"."location"#>>'{latitude}')::float -  ${location.latitude}::float), 2) + 
+              POW(69.1 * (${location.longitude}::float - ("Quest"."location"#>>'{longitude}')::float) * COS(("Quest"."location"#>>'{longitude}')::float / 57.3), 2)
+            ) * 1.609344)::numeric,
+            1
+          )
           `), 
           'distance',
         ],
