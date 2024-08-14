@@ -1,7 +1,10 @@
 import { config } from 'api/config/config';
 import { Sequelize } from 'sequelize';
 
+
+
 import { defineDatabaseModels } from './models';
+
 
 const database = new Sequelize({
   dialect: 'postgres',

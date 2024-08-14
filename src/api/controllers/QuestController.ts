@@ -125,17 +125,19 @@ export class QuestController extends BaseController {
   getClosestQuests = async (req: express.Request, res: express.Response): Promise<express.Response> => {
     const query: any = req.query;
 
-    const body: any = req.body;
-
     if (query) {
-      // const result = await this.questService.getClosestQuests(
-      //   body.latitude,
-      //   body.longitude,
-      //   body.distance ? body.distance : 10,
-      //   body.category,
-      //   query
-      // );
-      // return this.Ok(res, result);
+      const result = await this.questService.getClosestQuests(
+        {
+          latitude: query.lat,
+          longitude: query.lng
+        },
+        query.category,
+        {
+          page: query.page,
+          rpp: query.rpp
+        }
+      );
+      return this.Ok(res, result);
     }
 
     return this.BadRequest(res);

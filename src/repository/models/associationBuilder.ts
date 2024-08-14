@@ -1,5 +1,6 @@
 import { Sequelize } from 'sequelize/types';
 
+
 export const buildAssociations = (sequelize: Sequelize) => {
   const { User, Quest, UserQuest, Station, UserStation, Reward, UserReward, Category, QuestCategory } =
     sequelize.models;
@@ -38,12 +39,12 @@ export const buildAssociations = (sequelize: Sequelize) => {
   // User.hasMany(UserReward);
   // Reward.hasMany(UserReward);
 
-  // Quest.belongsToMany(Category, { through: QuestCategory });
-  // Category.belongsToMany(Quest, { through: QuestCategory });
-  // QuestCategory.belongsTo(Quest);
-  // QuestCategory.belongsTo(Category);
-  // Quest.hasMany(QuestCategory);
-  // Category.hasMany(QuestCategory);
+  Quest.belongsToMany(Category, { through: QuestCategory, foreignKey: 'questId' });
+  Category.belongsToMany(Quest, { through: QuestCategory, foreignKey: 'categoryId' });
+  QuestCategory.belongsTo(Quest);
+  QuestCategory.belongsTo(Category);
+  Quest.hasMany(QuestCategory, { foreignKey: 'questId' });
+  Category.hasMany(QuestCategory, { foreignKey: 'categoryId' });
 
   Quest.hasMany(Station, { foreignKey: 'questId' });
   Station.belongsTo(Quest, { foreignKey: 'questId' });

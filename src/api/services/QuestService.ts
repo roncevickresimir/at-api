@@ -1,7 +1,7 @@
-import sequelize, { Transaction } from 'sequelize';
+import { Sequelize } from 'sequelize';
 
-import { Location, PageRpp, QuestCreate } from '@api/dtos';
-import { Quest, Reward, Station, UserQuest, UserStation } from '@api/models';
+import { Location, PageRpp } from '@api/dtos';
+import { Category, Quest,  Reward, Station, UserQuest, UserStation } from '@api/models';
 import { injectable } from 'tsyringe';
 
 @injectable()
@@ -233,31 +233,43 @@ export class QuestService {
 
   getClosestQuests = async (
     location: Location,
-    distance: number = 100,
     category?: string,
     filter?: PageRpp,
-  ): Promise<Quest[] | null> => {
-    if (typeof filter !== 'undefined')
-      return Quest.findAll({
-        where: sequelize.literal(`${category ? ` position('${category}' in "Quest"."categoryIds")>0` : ''}`),
-        limit: filter.rpp,
-        offset: (filter.page - 1) * filter.rpp,
-        include: [
-          {
-            model: Station,
-          },
+    distance: number = 100,
+  ): Promise<any | null> => {
+    return await Quest.findAll({
+      include: [
+        {
+          model: Category,
+          where: category 
+            ? Sequelize.literal(`"Categories->QuestCategory"."categoryId" = '${category}'`)
+            : undefined,
+          attributes: ["id"]
+        },
+        {
+          model: Station,
+          attributes: ["id"]
+        },
+      ],
+      offset: filter?.page,
+      limit: filter?.rpp,
+      subQuery: false,
+      attributes: [
+        [
+          Sequelize.literal(`
+            (("Quest"."location"#>>'{latitude}')::numeric + ${location.latitude}) +
+            (("Quest"."location"#>>'{longitude}')::numeric + ${location.longitude})
+          `), 
+          'distance',
         ],
-      });
-    else
-      return Quest.findAll({
-        where: sequelize.literal(
-          `( SQRT( POW( ${location.latitude} - "Quest"."location",2) + POW( ${location.longitude} - "Quest"."longitude",2)) < ${distance} )`,
-        ),
-        include: [
-          {
-            model: Station,
-          },
-        ],
-      });
-  };
+        "id", 
+        "title", 
+        "description",
+        "disabled",
+        "image",
+        "location",
+      ],
+      order: [[`distance`, 'ASC']],
+    });
+ };
 }

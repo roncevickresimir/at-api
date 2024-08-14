@@ -7,11 +7,14 @@ import { QuestController } from '@api/controllers';
 import { PageRpp, QuestCreate } from '@api/dtos';
 import { auth, upload, validateBody, validateQuery } from '@api/middleware';
 
+
 const questRouter = Router();
 
 const questController = container.resolve(QuestController);
 
 questRouter.post('/', validateBody(QuestCreate), auth, questController.createQuest);
+
+questRouter.get('/closest', questController.getClosestQuests);
 
 questRouter.get('/', validateQuery(PageRpp), questController.getQuests);
 
@@ -30,7 +33,5 @@ questRouter.put('/:questId', validateBody(QuestCreate), questController.editQues
 questRouter.get('/disable/:stationId', questController.disableQuest);
 
 questRouter.get('/enable/:stationId', questController.enableQuest);
-
-questRouter.post('/closest', validateQuery(PageRpp), questController.getClosestQuests);
 
 export { questRouter };

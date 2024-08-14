@@ -3,10 +3,14 @@ import express from 'express';
 import { createServer } from 'http';
 import 'reflect-metadata';
 
+
+
 import { router } from '@api/routes';
 import { ErrorHandler, handleError } from '@api/util';
 
 import { config } from './api/config';
+
+console.log('Server started.');
 
 const baseUrl = '/v1';
 
@@ -30,6 +34,19 @@ app.use(
 );
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+
+app.use((req: express.Request, _res: express.Response, next: express.NextFunction) => {
+  console.log({
+    message: `Request recieved @ ${new Date().toISOString()}`,
+    method: req.method,
+    path: req.path,
+    body: req.body,
+    query: req.query,
+    // headers: req.headers,
+  });
+  next();
+});
+
 app.use(baseUrl, express.static('./public'));
 app.use(baseUrl, router);
 
