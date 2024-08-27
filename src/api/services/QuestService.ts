@@ -1,7 +1,7 @@
 import { Sequelize } from 'sequelize';
 
 import { Location, PageRpp } from '@api/dtos';
-import { Category, Quest,  Reward, Station, UserQuest, UserStation } from '@api/models';
+import { Category, Quest,  Reward, Station, User, UserQuest, UserStation } from '@api/models';
 import { injectable } from 'tsyringe';
 
 @injectable()
@@ -70,32 +70,35 @@ export class QuestService {
   };
 
   getUserQuest = async (questId: string, userId: string): Promise<any | null> => {
-    return UserQuest.findOne({
+    return await Quest.findOne({
       where: {
-        questId: questId,
-        userId: userId,
+        id: questId,
       },
       include: [
         {
-          model: Quest,
-          include: [
-            {
-              model: Station,
-              include: [{
-                model: UserStation,
-                where: {
-                  userId: userId
-                }
-              }]
-            },
-            {
-              model: Reward,
-            },
-          ],
+          model: UserQuest,
+          required: false,
+          where: {
+            questId: questId,
+            userId: userId,
+          }
+        },
+        {
+          model: Station,
+          include: [{
+            model: UserStation,
+            required: false,
+            where: {
+              userId: userId
+            }
+          }]
+        },
+        {
+          model: Reward,
         },
       ],
-    });
-  };
+    }); 
+  }
 
   getCompletedUserQuests = async (userId?: string): Promise<any> => {
     const userQuests = await UserQuest.findAll({
@@ -238,7 +241,7 @@ export class QuestService {
     distance: number = 100,
   ): Promise<any | null> => {
     return await Quest.findAll({
-      include: [
+      include: category ? [
         {
           model: Category,
           where: category 
@@ -250,7 +253,10 @@ export class QuestService {
           model: Station,
           attributes: ["id"]
         },
-      ],
+      ] : [{
+        model: Station,
+        attributes: ["id"]
+      }],
       offset: filter?.page,
       limit: filter?.rpp,
       subQuery: false,
@@ -276,5 +282,5 @@ export class QuestService {
       ],
       order: [[`distance`, 'ASC']],
     });
- };
+  };
 }

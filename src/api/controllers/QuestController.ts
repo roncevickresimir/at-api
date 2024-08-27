@@ -1,6 +1,8 @@
 import express from 'express';
 import { Exception } from 'handlebars';
 
+
+
 import { QuestCreate, ROLES } from '@api/dtos';
 import { QuestService, UserService } from '@api/services';
 
@@ -129,13 +131,13 @@ export class QuestController extends BaseController {
       const result = await this.questService.getClosestQuests(
         {
           latitude: query.lat,
-          longitude: query.lng
+          longitude: query.lng,
         },
         query.category,
         {
           page: query.page,
-          rpp: query.rpp
-        }
+          rpp: query.rpp,
+        },
       );
       return this.Ok(res, result);
     }
@@ -148,26 +150,7 @@ export class QuestController extends BaseController {
 
     const data = await this.questService.getUserQuest(questId, userId);
 
-    const result = {
-      id: data.Quest.id,
-      title: data.Quest.title,
-      description: data.Quest.description,
-      location: data.Quest.location,
-      image: data.Quest.image,
-      progress: data.progress,
-      complete: data.complete,
-      stations: data.Quest.Stations.map((s) => ({
-        id: s.id,
-        title: s.title,
-        description: s.description,
-        location: s.location,
-        disabled: s.disabled,
-        complete: s.UserStations[0].complete,
-      })),
-      rewards: data.Quest.Rewards,
-    };
-
-    return this.Ok(res, result);
+    return this.Ok(res, data.get({ plain: true }));
   };
 
   getCompletedUserQuests = async (req: express.Request, res: express.Response): Promise<express.Response> => {

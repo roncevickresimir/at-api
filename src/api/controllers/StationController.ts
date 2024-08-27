@@ -1,6 +1,8 @@
 import express from 'express';
 import { Exception } from 'handlebars';
 
+
+
 import { CreateStation, ROLES } from '@api/dtos';
 import { Station } from '@api/models';
 import { QuestService, StationService, UserService } from '@api/services';
@@ -54,7 +56,8 @@ export class StationController extends BaseController {
     if (params.stationId) {
       const station: Station | null = await this.stationService.getById(params.stationId);
 
-      return this.Ok(res, station);
+      console.log(station?.get({ plain: true }));
+      return this.Ok(res, station?.get({ plain: true }));
     }
 
     return this.BadRequest(res);

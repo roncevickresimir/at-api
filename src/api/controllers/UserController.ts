@@ -4,7 +4,7 @@ import {
   UserCreate,
 } from "@api/dtos";
 import { UserService } from "@api/services";
-import { generateLoginCodeToken } from "@api/util";
+import { generateAuthToken as generateAuthToken } from "@api/util";
 import bcrypt from "bcryptjs";
 import express from "express";
 import { database } from "repository";
@@ -15,7 +15,7 @@ import { BaseController } from "./BaseController";
 export class UserController extends BaseController {
   private userService = new UserService();
 
-  PostLoginAsync = async (
+  PostLoginClientAsync = async (
     req: express.Request,
     res: express.Response,
     next: express.NextFunction
@@ -39,7 +39,7 @@ export class UserController extends BaseController {
         );
 
       if (user.id) {
-        const token = await generateLoginCodeToken(user.id);
+        const token = await generateAuthToken(user.id);
 
         Object.assign(user, { token: token });
 
@@ -87,7 +87,7 @@ export class UserController extends BaseController {
     return this.Unauthorized(res);
   };
 
-  PostRegisterAsync = async (
+  PostRegisterClientAsync = async (
     req: express.Request,
     res: express.Response
   ): Promise<express.Response> => {
@@ -102,8 +102,8 @@ export class UserController extends BaseController {
 
     try {
       const [checkEmail, checkUsername] = await Promise.all([
-        await this.userService.GetByEmailAsync(body.email),
-        await this.userService.GetByUserNameAsync(body.username),
+        await this.userService.GetByEmailAsync(body.email, ROLES.USER),
+        await this.userService.GetByUserNameAsync(body.username, ROLES.USER),
       ]);
 
       if (checkEmail || checkUsername) {
@@ -139,18 +139,18 @@ export class UserController extends BaseController {
     const transaction = await database.transaction();
 
     try {
-      const [checkEmail, checkUsername] = await Promise.all([
-        await this.userService.GetByEmailAsync(body.email),
-        await this.userService.GetByUserNameAsync(body.username),
+      const [checkEmail] = await Promise.all([
+        await this.userService.GetByEmailAsync(body.email, ROLES.USER),
       ]);
 
-      if (checkEmail || checkUsername) {
+      if (checkEmail) {
         transaction.rollback();
         return this.BadRequest(
           res,
           "BACKEND_ERRORS.INTERNAL_ERROR.EMAIL_OR_USERNAME_EXISTS"
         );
       }
+
       const result = await this.userService.CreateEndUserAsync(
         body,
         transaction
@@ -166,45 +166,41 @@ export class UserController extends BaseController {
     }
   };
 
-  LoginEndUserAsync = async (
+  LoginUserAsync = async (
     req: express.Request,
     res: express.Response
   ): Promise<express.Response> => {
     const body: UserLogin = req.body;
 
-    const user = await this.userService.LoginEndUserAsync(
+    const user = await this.userService.LoginUserAsync(
       body.username,
       body.email
     );
 
-    if (user) {
-      const isPasswordValid = await bcrypt.compare(
-        body.password,
-        user.password
+    if (!user) { 
+      return this.BadRequest(
+        res,
+        "BACKEND_ERRORS.INTERNAL_ERROR.EMAIL_OR_USERNAME_OR_PASSWORD_WRONG"
       );
-
-      if (!isPasswordValid)
-        return this.Unauthorized(
-          res,
-          "BACKEND_ERRORS.INTERNAL_ERROR.EMAIL_OR_USERNAME_OR_PASSWORD_WRONG"
-        );
-
-      if (user.id) {
-        const token = await generateLoginCodeToken(user.id);
-
-        Object.assign(user, { token: token });
-
-        const result = {
-          User: user,
-          token: token,
-        };
-        return this.Ok(res, result);
-      }
     }
 
-    return this.BadRequest(
-      res,
-      "BACKEND_ERRORS.INTERNAL_ERROR.EMAIL_OR_USERNAME_OR_PASSWORD_WRONG"
+    const isPasswordValid = await bcrypt.compare(
+      body.password,
+      user.password
     );
+
+    if (!isPasswordValid) {
+      return this.Unauthorized(
+        res,
+        "BACKEND_ERRORS.INTERNAL_ERROR.EMAIL_OR_USERNAME_OR_PASSWORD_WRONG"
+      );
+    }
+
+    const result = {
+      User: user,
+      token: await generateAuthToken(user.id),
+    };
+
+    return this.Ok(res, result);
   };
 }

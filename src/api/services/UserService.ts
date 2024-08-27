@@ -2,6 +2,8 @@ import { startCase, toLower } from 'lodash';
 import { database } from 'repository';
 import { Transaction } from 'sequelize';
 
+
+
 import { PageRpp, ROLES, UserCreate } from '@api/dtos';
 import { User } from '@api/models';
 import { hashPassword } from '@api/util';
@@ -11,21 +13,20 @@ export class UserService {
     return User.findByPk(id);
   };
 
-  GetByEmailAsync = async (email: string): Promise<User | null> => {
+  GetByEmailAsync = async (email: string, role: ROLES): Promise<User | null> => {
     return User.findOne({
       where: {
         email: email,
+        role: role,
       },
     });
   };
 
-  GetByUserNameAsync = async (username: string): Promise<User | null> => {
-    return User.findOne({ where: { username: username } });
+  GetByUserNameAsync = async (username: string, role: ROLES): Promise<User | null> => {
+    return User.findOne({ where: { username: username, role: role } });
   };
 
-  getUsers = async (
-    filter: PageRpp = { page: 1, rpp: 20 },
-  ): Promise<User[] | null> => {
+  getUsers = async (filter: PageRpp = { page: 1, rpp: 20 }): Promise<User[] | null> => {
     return User.findAll({
       limit: filter.rpp,
       offset: (filter.page - 1) * filter.rpp,
@@ -36,11 +37,7 @@ export class UserService {
     return User.count();
   };
 
-  CreateUserAsync = async (
-    data: UserCreate,
-    transaction: Transaction,
-    role: ROLES,
-  ): Promise<User> => {
+  CreateUserAsync = async (data: UserCreate, transaction: Transaction, role: ROLES): Promise<User> => {
     data.firstName = startCase(toLower(data.firstName));
     data.lastName = startCase(toLower(data.lastName));
 
@@ -58,18 +55,15 @@ export class UserService {
     return user;
   };
 
-  CreateEndUserAsync = async (
-    data: UserCreate,
-    transaction: Transaction,
-  ): Promise<User> => {
+  CreateEndUserAsync = async (data: UserCreate, transaction: Transaction): Promise<User> => {
     const password = await hashPassword(data.password);
-    const entity = new User({
-      ...data,
-      password: password,
-    });
 
-    await User.create(
-      { ...entity },
+    const entity = await User.create(
+      {
+        ...data,
+        role: ROLES.USER,
+        password: password,
+      },
       {
         transaction,
       },
@@ -78,10 +72,7 @@ export class UserService {
     return entity;
   };
 
-  PostLoginAsync = async (
-    username?: string,
-    email?: string,
-  ): Promise<any | null> => {
+  PostLoginAsync = async (username?: string, email?: string): Promise<any | null> => {
     if (username)
       return User.findOne({
         where: {
@@ -99,14 +90,12 @@ export class UserService {
     return null;
   };
 
-  LoginEndUserAsync = async (
-    username?: string,
-    email?: string,
-  ): Promise<User | null> => {
+  LoginUserAsync = async (username?: string, email?: string): Promise<User | null> => {
     if (username)
       return User.findOne({
         where: {
           username: username,
+          role: [ROLES.USER, ROLES.ADMIN, ROLES.CLIENT],
         },
       });
 
@@ -114,6 +103,7 @@ export class UserService {
       return User.findOne({
         where: {
           email: email,
+          role: [ROLES.USER, ROLES.ADMIN, ROLES.CLIENT],
         },
       });
 

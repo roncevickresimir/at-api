@@ -1,5 +1,5 @@
 import { getCommonModelOptions } from 'repository';
-import { Sequelize, TEXT, UUID, UUIDV4 } from 'sequelize';
+import { TEXT, UUID, UUIDV4 } from 'sequelize';
 
 import { User } from '@api/models';
 
@@ -19,7 +19,7 @@ export const initModel = () => {
       email: {
         type: TEXT,
         allowNull: false,
-        unique: true,
+        unique: false,
       },
       password: {
         type: TEXT,
@@ -29,15 +29,15 @@ export const initModel = () => {
       username: {
         type: TEXT,
         allowNull: false,
-        unique: true,
+        unique: false,
       },
       firstName: {
         type: TEXT,
-        allowNull: false,
+        allowNull: true,
       },
       lastName: {
         type: TEXT,
-        allowNull: false,
+        allowNull: true,
       },
     },
     {
